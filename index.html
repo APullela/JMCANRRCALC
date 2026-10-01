@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cricket NRR & Qualification Scenario Calculator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#0f172a',
+                        cardbg: '#1e293b',
+                        accent: '#38bdf8',
+                        success: '#22c55e',
+                        danger: '#ef4444'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+<body class="bg-darkbg text-slate-100 min-h-screen flex flex-col antialiased">
+
+    <header class="bg-cardbg border-b border-slate-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-accent/10 p-2.5 rounded-xl border border-accent/20 text-accent">
+                    <i class="fa-solid fa-calculator text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-accent bg-clip-text text-transparent">
+                        Cricket NRR Scenario Matrix
+                    </h1>
+                    <p class="text-xs text-slate-400">JMCA vs RRAW Titans Qualification & Net Run Rate Lab</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="resetDefaults()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg border border-slate-700 transition flex items-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> Reset Defaults
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Column: Baseline Stats & Simulator Controls (7 Cols) -->
+        <div class="lg:col-span-7 space-y-6">
+
+            <!-- Qualification Status Banner -->
+            <div id="statusBanner" class="p-5 rounded-2xl border bg-gradient-to-r from-cardbg to-slate-900 shadow-xl transition-all duration-300">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <span id="winnerBadge" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2"></span>
+                        <h2 id="winnerText" class="text-2xl font-black tracking-tight"></h2>
+                        <p id="winnerSubtext" class="text-sm text-slate-400 mt-1"></p>
+                    </div>
+                    <div class="text-right hidden sm:block">
+                        <span class="text-xs text-slate-500 uppercase font-semibold">Simulated Margin</span>
+                        <div id="marginDisplay" class="text-lg font-bold font-mono text-accent">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Match Simulation Controls -->
+            <div class="bg-cardbg rounded-2xl p-5 border border-slate-800 shadow-xl">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+                    <h3 class="font-bold text-base flex items-center gap-2 text-slate-200">
+                        <i class="fa-solid fa-gamepad text-accent"></i> RRAW Titans Match 6 Simulation
+                    </h3>
+                    <span class="text-xs px-2.5 py-1 bg-accent/10 text-accent rounded-full border border-accent/20 font-medium">Interactive Matchday</span>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- Batting First Toggle -->
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Match Scenario / Batting Order</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button type="button" id="btnTitansBatFirst" onclick="setBattingOrder('titans')" class="py-2.5 px-4 rounded-xl border text-sm font-semibold transition flex items-center justify-center gap-2 bg-accent text-slate-950 border-accent shadow-lg shadow-accent/10">
+                                <i class="fa-solid fa-shield-halved"></i> Titans Bat First
+                            </button>
+                            <button type="button" id="btnOppBatFirst" onclick="setBattingOrder('opponent')" class="py-2.5 px-4 rounded-xl border text-sm font-semibold transition flex items-center justify-center gap-2 bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700">
+                                <i class="fa-solid fa-bullseye"></i> Titans Chase
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Inputs for Match -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                        <!-- Titans Innings -->
+                        <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                            <label class="block text-xs font-semibold text-accent mb-2 uppercase tracking-wide" id="lblTitansInnings">Titans Innings (Batting First)</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <span class="text-[10px] text-slate-400 block mb-1">Runs Scored</span>
+                                    <input type="number" id="simTitansRuns" value="260" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-accent">
+                                </div>
+                                <div>
+                                    <span class="text-[10px] text-slate-400 block mb-1">Overs Faced</span>
+                                    <input type="number" id="simTitansOvers" value="40" step="0.1" min="0.1" max="40" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-accent">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Opponent Innings -->
+                        <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                            <label class="block text-xs font-semibold text-rose-400 mb-2 uppercase tracking-wide" id="lblOppInnings">Opponent Innings (Chasing/Defending)</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <span class="text-[10px] text-slate-400 block mb-1" id="lblOppRuns">Runs Conceded</span>
+                                    <input type="number" id="simOppRuns" value="180" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-accent">
+                                </div>
+                                <div>
+                                    <span class="text-[10px] text-slate-400 block mb-1" id="lblOppOvers">Overs Bowled</span>
+                                    <input type="number" id="simOppOvers" value="40" step="0.1" min="0.1" max="40" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-accent">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Presets -->
+                    <div class="pt-2">
+                        <span class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Preset Scenarios</span>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="loadPreset('scenario1')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg border border-slate-700 transition">
+                                Titans 260/0 (40 ov) vs 180 (40 ov)
+                            </button>
+                            <button onclick="loadPreset('scenario2')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg border border-slate-700 transition">
+                                Titans Chase 200 in 26 ov
+                            </button>
+                            <button onclick="loadPreset('scenario3')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg border border-slate-700 transition">
+                                Titans Score 60 (Low Score)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Editable Baseline Stats (Accordion or Card) -->
+            <div class="bg-cardbg rounded-2xl p-5 border border-slate-800 shadow-xl">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+                    <h3 class="font-bold text-base flex items-center gap-2 text-slate-200">
+                        <i class="fa-solid fa-sliders text-accent"></i> Baseline Team Statistics
+                    </h3>
+                    <span class="text-xs text-slate-400">Fully Editable Values</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- JMCA Baseline -->
+                    <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-sm text-sky-400 flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span> JMCA (4th Place)
+                            </span>
+                            <span class="text-xs font-mono bg-sky-950 text-sky-300 px-2 py-0.5 rounded border border-sky-800">8 Pts</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                                <label class="text-slate-400 block mb-1">Runs Scored</label>
+                                <input type="number" id="jmcaRunsScored" value="877" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 font-mono text-white">
+                            </div>
+                            <div>
+                                <label class="text-slate-400 block mb-1">Overs Faced</label>
+                                <input type="number" id="jmcaOversFaced" value="175.5" step="0.1" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 font-mono text-white">
+                            </div>
+                            <div>
+                                <label class="text-slate-400 block mb-1">Runs Conceded</label>
+                                <input type="number" id="jmcaRunsConceded" value="803" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 font-mono text-white">
+                            </div>
+                            <div>
+                                <label class="text-slate-400 block mb-1">Overs Bowled</label>
+                                <input type="number" id="jmcaOversBowled" value="200.5" step="0.1" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 font-mono text-white">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RRAW Titans Baseline -->
+                    <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-sm text-amber-400 flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> RRAW Titans (5th)
+                            </span>
+                            <span class="text-xs font-mono bg-amber-950 text-amber-300 px-2 py-0.5 rounded border border-amber-800">6 Pts (5 M)</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                                <label class="text-slate-400 block mb-1">Runs Scored</label>
+                                <input type="number" id="titansRunsScored" value="720" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 font-mono text-white">
+                            </div>
+                            <div>
+                                <label class="text-slate-400 block mb-1">Overs Faced</label>
+                                <input type="number" id="titansOversFaced" value="153.5" step="0.1" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 font-mono text-white">
+                            </div>
+                            <div>
+                                <label class="text-slate-400 block mb-1">Runs Conceded</label>
+                                <input type="number" id="titansRunsConceded" value="565" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 font-mono text-white">
+                            </div>
+                            <div>
+                                <label class="text-slate-400 block mb-1">Overs Bowled</label>
+                                <input type="number" id="titansOversBowled" value="145.3" step="0.1" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 font-mono text-white">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Live Calculated Standings & NRR Breakdown (5 Cols) -->
+        <div class="lg:col-span-5 space-y-6">
+
+            <!-- Live Standings Table Card -->
+            <div class="bg-cardbg rounded-2xl p-5 border border-slate-800 shadow-xl">
+                <h3 class="font-bold text-base mb-4 flex items-center gap-2 text-slate-200">
+                    <i class="fa-solid fa-trophy text-accent"></i> Projected Final Standings
+                </h3>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-xs text-slate-400 uppercase tracking-wider">
+                                <th class="py-2.5 px-3">Pos & Team</th>
+                                <th class="py-2.5 px-2 text-center">Mat</th>
+                                <th class="py-2.5 px-2 text-center">Pts</th>
+                                <th class="py-2.5 px-3 text-right">NRR</th>
+                            </tr>
+                        </thead>
+                        <tbody id="standingsTableBody" class="divide-y divide-slate-800/60 text-sm">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Detailed NRR & Metrics Card -->
+            <div class="bg-cardbg rounded-2xl p-5 border border-slate-800 shadow-xl space-y-4">
+                <h3 class="font-bold text-base flex items-center gap-2 text-slate-200">
+                    <i class="fa-solid fa-chart-line text-accent"></i> Live NRR Analysis & Metrics
+                </h3>
+
+                <!-- Titans New Stats Output -->
+                <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
+                    <div class="flex justify-between items-center text-xs text-slate-400">
+                        <span class="font-semibold text-slate-300">RRAW Titans Projected Totals (6 Matches)</span>
+                        <span id="titansMatchOutcome" class="font-bold text-success">Win (+2 Pts = 8 Pts)</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 text-xs font-mono">
+                        <div class="bg-slate-800/80 p-2.5 rounded-lg border border-slate-700/50">
+                            <span class="text-slate-400 block text-[10px]">Total Scored / Overs</span>
+                            <span id="outTitansScoredOvers" class="text-white font-bold text-sm">--</span>
+                            <span id="outTitansBatRate" class="text-slate-400 block text-[10px] mt-0.5">-- RPO</span>
+                        </div>
+                        <div class="bg-slate-800/80 p-2.5 rounded-lg border border-slate-700/50">
+                            <span class="text-slate-400 block text-[10px]">Total Conceded / Overs</span>
+                            <span id="outTitansConcededOvers" class="text-white font-bold text-sm">--</span>
+                            <span id="outTitansBowlRate" class="text-slate-400 block text-[10px] mt-0.5">-- RPO</span>
+                        </div>
+                    </div>
+                    <div class="pt-2 flex justify-between items-center border-t border-slate-800">
+                        <span class="text-xs font-semibold text-slate-300">Projected Titans NRR:</span>
+                        <span id="outTitansNRR" class="font-mono font-bold text-base">--</span>
+                    </div>
+                </div>
+
+                <!-- JMCA Reference Output -->
+                <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-2">
+                    <div class="flex justify-between items-center text-xs text-slate-400">
+                        <span class="font-semibold text-sky-400">JMCA Benchmark (6 Matches Completed)</span>
+                        <span class="font-bold text-sky-300">8 Points</span>
+                    </div>
+                    <div class="flex justify-between items-center font-mono">
+                        <span class="text-xs text-slate-400">Fixed NRR Target:</span>
+                        <span id="outJmcaNRR" class="font-bold text-sky-400 text-sm">--</span>
+                    </div>
+                </div>
+
+                <!-- Difference & Threshold Indicator -->
+                <div id="thresholdBox" class="p-4 rounded-xl border text-xs space-y-1">
+                    <div class="font-bold flex items-center gap-1.5" id="thresholdTitle">--</div>
+                    <p class="text-slate-400 leading-relaxed" id="thresholdDesc">--</p>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <footer class="bg-cardbg border-t border-slate-800 py-4 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
+            Cricket NRR Scenario Lab &bull; Formatted for 40-Over League Standings
+        </div>
+    </footer>
+
+    <script>
+        // Cricket over notation helper: e.g., 145.3 means 145 overs and 3 balls (145 + 3/6 = 145.5 overs)
+        function toDecimalOvers(oversInput) {
+            let val = parseFloat(oversInput) || 0;
+            let overs = Math.floor(val);
+            let balls = Math.round((val - overs) * 10);
+            if (balls >= 6) {
+                overs += Math.floor(balls / 6);
+                balls = balls % 6;
+            }
+            return overs + (balls / 6);
+        }
+
+        function formatDisplayOvers(decimalOvers) {
+            let overs = Math.floor(decimalOvers);
+            let balls = Math.round((decimalOvers - overs) * 6);
+            if (balls === 6) {
+                overs += 1;
+                balls = 0;
+            }
+            return `${overs}.${balls}`;
+        }
+
+        let battingOrder = 'titans'; // 'titans' = Titans bat first, 'opponent' = Opponent bats first
+
+        function setBattingOrder(order) {
+            battingOrder = order;
+            const btnTitans = document.getElementById('btnTitansBatFirst');
+            const btnOpp = document.getElementById('btnOppBatFirst');
+            const lblTitansInnings = document.getElementById('lblTitansInnings');
+            const lblOppInnings = document.getElementById('lblOppInnings');
+            const lblOppRuns = document.getElementById('lblOppRuns');
+            const lblOppOvers = document.getElementById('lblOppOvers');
+
+            if (order === 'titans') {
+                btnTitans.className = "py-2.5 px-4 rounded-xl border text-sm font-semibold transition flex items-center justify-center gap-2 bg-accent text-slate-950 border-accent shadow-lg shadow-accent/10";
+                btnOpp.className = "py-2.5 px-4 rounded-xl border text-sm font-semibold transition flex items-center justify-center gap-2 bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700";
+                
+                lblTitansInnings.innerText = "Titans Innings (Batting First)";
+                lblOppInnings.innerText = "Opponent Innings (Chasing)";
+                lblOppRuns.innerText = "Runs Conceded";
+                lblOppOvers.innerText = "Overs Bowled";
+
+                document.getElementById('simTitansRuns').value = 260;
+                document.getElementById('simTitansOvers').value = 40;
+                document.getElementById('simOppRuns').value = 180;
+                document.getElementById('simOppOvers').value = 40;
+            } else {
+                btnOpp.className = "py-2.5 px-4 rounded-xl border text-sm font-semibold transition flex items-center justify-center gap-2 bg-accent text-slate-950 border-accent shadow-lg shadow-accent/10";
+                btnTitans.className = "py-2.5 px-4 rounded-xl border text-sm font-semibold transition flex items-center justify-center gap-2 bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700";
+                
+                lblTitansInnings.innerText = "Titans Innings (Chasing)";
+                lblOppInnings.innerText = "Opponent Innings (Batting First)";
+                lblOppRuns.innerText = "Runs Target / Scored";
+                lblOppOvers.innerText = "Overs Faced in Chase";
+
+                document.getElementById('simOppRuns').value = 200;
+                document.getElementById('simOppOvers').value = 40;
+                document.getElementById('simTitansRuns').value = 204;
+                document.getElementById('simTitansOvers').value = 26;
+            }
+            calculate();
+        }
+
+        function loadPreset(type) {
+            if (type === 'scenario1') {
+                setBattingOrder('titans');
+                document.getElementById('simTitansRuns').value = 260;
+                document.getElementById('simTitansOvers').value = 40;
+                document.getElementById('simOppRuns').value = 180;
+                document.getElementById('simOppOvers').value = 40;
+            } else if (type === 'scenario2') {
+                setBattingOrder('opponent');
+                document.getElementById('simOppRuns').value = 200;
+                document.getElementById('simOppOvers').value = 40;
+                document.getElementById('simTitansRuns').value = 204;
+                document.getElementById('simTitansOvers').value = 26;
+            } else if (type === 'scenario3') {
+                setBattingOrder('titans');
+                document.getElementById('simTitansRuns').value = 60;
+                document.getElementById('simTitansOvers').value = 20;
+                document.getElementById('simOppRuns').value = 61;
+                document.getElementById('simOppOvers').value = 10;
+            }
+            calculate();
+        }
+
+        function resetDefaults() {
+            document.getElementById('jmcaRunsScored').value = 877;
+            document.getElementById('jmcaOversFaced').value = 175.5;
+            document.getElementById('jmcaRunsConceded').value = 803;
+            document.getElementById('jmcaOversBowled').value = 200.5;
+
+            document.getElementById('titansRunsScored').value = 720;
+            document.getElementById('titansOversFaced').value = 153.5;
+            document.getElementById('titansRunsConceded').value = 565;
+            document.getElementById('titansOversBowled').value = 145.3;
+
+            setBattingOrder('titans');
+        }
+
+        function calculate() {
+            // Read JMCA baseline
+            const jmcaRS = parseFloat(document.getElementById('jmcaRunsScored').value) || 0;
+            const jmcaOF = toDecimalOvers(document.getElementById('jmcaOversFaced').value);
+            const jmcaRC = parseFloat(document.getElementById('jmcaRunsConceded').value) || 0;
+            const jmcaOB = toDecimalOvers(document.getElementById('jmcaOversBowled').value);
+
+            const jmcaBatRate = jmcaOF > 0 ? (jmcaRS / jmcaOF) : 0;
+            const jmcaBowlRate = jmcaOB > 0 ? (jmcaRC / jmcaOB) : 0;
+            const jmcaNRR = jmcaBatRate - jmcaBowlRate;
+
+            // Read Titans current baseline
+            const tCurrRS = parseFloat(document.getElementById('titansRunsScored').value) || 0;
+            const tCurrOF = toDecimalOvers(document.getElementById('titansOversFaced').value);
+            const tCurrRC = parseFloat(document.getElementById('titansRunsConceded').value) || 0;
+            const tCurrOB = toDecimalOvers(document.getElementById('titansOversBowled').value);
+
+            // Read match simulation inputs
+            const simTR = parseFloat(document.getElementById('simTitansRuns').value) || 0;
+            const simTO = toDecimalOvers(document.getElementById('simTitansOvers').value);
+            const simOR = parseFloat(document.getElementById('simOppRuns').value) || 0;
+            const simOO = toDecimalOvers(document.getElementById('simOppOvers').value);
+
+            let tNewRS = tCurrRS;
+            let tNewOF = tCurrOF;
+            let tNewRC = tCurrRC;
+            let tNewOB = tCurrOB;
+
+            if (battingOrder === 'titans') {
+                // Titans bat first, score simTR in simTO, then opponent scores simOR in simOO
+                tNewRS += simTR;
+                tNewOF += simTO;
+                tNewRC += simOR;
+                tNewOB += simOO;
+            } else {
+                // Opponent bats first, scores simOR in simOO, then Titans chase simTR in simTO
+                tNewRC += simOR;
+                tNewOB += simOO;
+                tNewRS += simTR;
+                tNewOF += simTO;
+            }
+
+            const tBatRate = tNewOF > 0 ? (tNewRS / tNewOF) : 0;
+            const tBowlRate = tNewOB > 0 ? (tNewRC / tNewOB) : 0;
+            const tNRR = tBatRate - tBowlRate;
+
+            // Display outputs
+            document.getElementById('outJmcaNRR').innerText = (jmcaNRR >= 0 ? '+' : '') + jmcaNRR.toFixed(4);
+            document.getElementById('outTitansNRR').innerText = (tNRR >= 0 ? '+' : '') + tNRR.toFixed(4);
+            document.getElementById('outTitansNRR').className = `font-mono font-bold text-base ${tNRR > jmcaNRR ? 'text-success' : 'text-slate-200'}`;
+
+            document.getElementById('outTitansScoredOvers').innerText = `${tNewRS} / ${formatDisplayOvers(tNewOF)}`;
+            document.getElementById('outTitansBatRate').innerText = `${tBatRate.toFixed(2)} Runs/Over`;
+
+            document.getElementById('outTitansConcededOvers').innerText = `${tNewRC} / ${formatDisplayOvers(tNewOB)}`;
+            document.getElementById('outTitansBowlRate').innerText = `${tBowlRate.toFixed(2)} Runs/Over`;
+
+            // Standings table update
+            // Both teams on 8 points. Compare NRR.
+            let jmcaPos = 4;
+            let titansPos = 5;
+            if (tNRR > jmcaNRR) {
+                titansPos = 4;
+                jmcaPos = 5;
+            }
+
+            let tableHTML = '';
+            const teams = [
+                { pos: jmcaPos, name: 'JMCA', mat: 6, pts: 8, nrr: jmcaNRR, color: 'text-sky-400' },
+                { pos: titansPos, name: 'RRAW Titans', mat: 6, pts: 8, nrr: tNRR, color: 'text-amber-400' }
+            ];
+            teams.sort((a, b) => a.pos - b.pos);
+
+            teams.forEach(t => {
+                tableHTML += `
+                    <tr class="hover:bg-slate-800/40 transition">
+                        <td class="py-3 px-3 font-semibold flex items-center gap-2">
+                            <span class="w-5 text-center font-bold text-slate-400">${t.pos}</span>
+                            <span class="${t.color}">${t.name}</span>
+                        </td>
+                        <td class="py-3 px-2 text-center font-mono text-slate-300">${t.mat}</td>
+                        <td class="py-3 px-2 text-center font-mono font-bold text-white">${t.pts}</td>
+                        <td class="py-3 px-3 text-right font-mono font-semibold ${t.nrr >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+                            ${(t.nrr >= 0 ? '+' : '') + t.nrr.toFixed(4)}
+                        </td>
+                    </tr>
+                `;
+            });
+            document.getElementById('standingsTableBody').innerHTML = tableHTML;
+
+            // Status Banner & Threshold
+            const banner = document.getElementById('statusBanner');
+            const winnerBadge = document.getElementById('winnerBadge');
+            const winnerText = document.getElementById('winnerText');
+            const winnerSubtext = document.getElementById('winnerSubtext');
+            const marginDisplay = document.getElementById('marginDisplay');
+            const thresholdBox = document.getElementById('thresholdBox');
+            const thresholdTitle = document.getElementById('thresholdTitle');
+            const thresholdDesc = document.getElementById('thresholdDesc');
+
+            const diff = Math.abs(tNRR - jmcaNRR);
+            marginDisplay.innerText = `Δ NRR: ${diff.toFixed(4)}`;
+
+            if (tNRR > jmcaNRR) {
+                banner.className = "p-5 rounded-2xl border bg-gradient-to-r from-amber-950/40 via-cardbg to-slate-900 border-amber-500/30 shadow-xl transition-all duration-300";
+                winnerBadge.className = "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2 bg-amber-500/20 text-amber-300 border border-amber-500/30";
+                winnerBadge.innerHTML = '<i class="fa-solid fa-arrow-trend-up mr-1.5"></i> Titans Leapfrog JMCA';
+                winnerText.innerText = "RRAW Titans Take 4th Place!";
+                winnerSubtext.innerText = "Titans surpass JMCA's NRR threshold and claim the final qualification spot.";
+                
+                thresholdBox.className = "p-4 rounded-xl border bg-amber-950/20 border-amber-500/30 text-xs space-y-1 text-amber-200/90";
+                thresholdTitle.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Qualification Alert: JMCA drops to 5th';
+                thresholdDesc.innerText = `Titans finished ahead by +${diff.toFixed(4)} NRR points. JMCA would need Titans to score fewer runs or take more overs in this match.`;
+            } else {
+                banner.className = "p-5 rounded-2xl border bg-gradient-to-r from-sky-950/40 via-cardbg to-slate-900 border-sky-500/30 shadow-xl transition-all duration-300";
+                winnerBadge.className = "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2 bg-sky-500/20 text-sky-300 border border-sky-500/30";
+                winnerBadge.innerHTML = '<i class="fa-solid fa-shield-check mr-1.5"></i> JMCA Safely Qualifies';
+                winnerText.innerText = "JMCA Defends 4th Place!";
+                winnerSubtext.innerText = "RRAW Titans fall short of the required Net Run Rate threshold.";
+
+                thresholdBox.className = "p-4 rounded-xl border bg-sky-950/20 border-sky-500/30 text-xs space-y-1 text-sky-200/90";
+                thresholdTitle.innerHTML = '<i class="fa-solid fa-circle-check text-sky-400"></i> Safe Margin: JMCA retains 4th';
+                thresholdDesc.innerText = `JMCA maintains a +${diff.toFixed(4)} NRR cushion over the Titans. The Titans needed to score faster or restrict runs further to overtake you.`;
+            }
+        }
+
+        // Run initial calculation on load
+        window.onload = calculate;
+    </script>
+</body>
+</html>
